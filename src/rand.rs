@@ -16,14 +16,15 @@ use std::str;
 /// The number retrieved will be based upon the time of the last reboot (x86_64)
 /// and something undefined for other architectures.
 pub fn timestamp_cycles() -> u64 {
+
     #[cfg(target_arch = "x86_64")]
     // Safe because there's nothing that can go wrong with this call.
-    unsafe {
+    return unsafe {
         std::arch::x86_64::_rdtsc() as u64
-    }
+    };
 
-    #[cfg(not(target_arch = "x86_64"))]
-    {
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "wasm32")))]
+    return {
         const MONOTONIC_CLOCK_MULTPIPLIER: u64 = 1_000_000_000;
 
         let mut ts = libc::timespec {
@@ -35,7 +36,9 @@ pub fn timestamp_cycles() -> u64 {
             libc::clock_gettime(libc::CLOCK_MONOTONIC, &mut ts);
         }
         (ts.tv_sec as u64) * MONOTONIC_CLOCK_MULTPIPLIER + (ts.tv_nsec as u64)
-    }
+    };
+
+    panic!("timestamp not supported in current architecture");
 }
 
 /// Generate pseudo random u32 numbers based on the current timestamp.
